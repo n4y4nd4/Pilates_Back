@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
+
+    <div style="background-color: #ffffff; max-width: 600px; margin: 0 auto; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+
+        <h2 style="color: #333333;">Lembrete de Cobrança - {{ status_cobranca }}</h2>
+        <p style="font-size: 16px; color: #555555;">Olá, **{{ nome_cliente }}**.</p>
+        
+        {% if status_cobranca == "Em Atraso" %}
+            <p style="color: #d9534f; font-weight: bold;">Identificamos que a cobrança referente ao ciclo **{{ ciclo_referencia }}** está em Atraso.</p>
+            <p style="color: #d9534f;">Por favor, regularize o pagamento para evitar a suspensão dos serviços e a cobrança de multas/juros.</p>
+        {% else %}
+            <p style="color: #5bc0de;">Este é um lembrete amigável sobre sua próxima cobrança referente ao ciclo **{{ ciclo_referencia }}**.</p>
+        {% endif %}
+
+        <hr style="border: 0; border-top: 1px solid #eeeeee; margin: 15px 0;">
+
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td style="padding: 8px 0; font-weight: bold; width: 40%;">Valor Total Devido:</td>
+                <td style="padding: 8px 0; color: #008000; font-weight: bold;">R$ {{ valor_total }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px 0; font-weight: bold;">Vencimento:</td>
+                <td style="padding: 8px 0;">{{ data_vencimento }}</td>
+            </tr>
+        </table>
+        
+        <p style="font-size: 14px; color: #777777; margin-top: 20px;">Qualquer dúvida, entre em contato conosco.</p>
+        <p style="font-size: 14px; color: #777777;">Atenciosamente,</p>
+        <p style="font-size: 14px; color: #777777; margin-top: -10px;">Equipe de Cobrança</p>
+    </div>
+
+</body>
+</html>
