@@ -24,7 +24,7 @@ SECRET_KEY = 'django-insecure-hgssxmukn$2ufn22780*v%4i(191mnw3v678urje%ndm#+d1g9
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '*']  # Para desenvolvimento. Em produção, especifique os hosts permitidos
 
 
 # Application definition
@@ -36,14 +36,16 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'cobranca_app',  # <-- NOVO: Nosso aplicativo principal
-    'rest_framework',      # <-- Para criar a API REST
-    'django_apscheduler',  # <-- Nosso agendador simplificado
+    'corsheaders',          # CORS para integração com React
+    'cobranca_app',         # Aplicativo principal
+    'rest_framework',       # API REST
+    'django_apscheduler',   # Agendador de tarefas
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # CORS middleware (deve estar antes de CommonMiddleware)
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -128,6 +130,7 @@ META_API_SETTINGS = {
     'PHONE_ID': '887155537805840', # SEU PHONE ID REAL
     'URL_BASE': 'https://graph.facebook.com/v22.0/', # A versão da API que está no seu cURL
     'MOCK_MODE': False, # MODO DE PRODUÇÃO REAL!
+    'WHATSAPP_ENABLED': True, # Kill Switch: Define como False para desativar envio de WhatsApp sem afetar E-mail
 }
 # =================================================================
 # CONFIGURAÇÃO DE E-MAIL (LINHA 16)
@@ -141,3 +144,52 @@ EMAIL_USE_TLS = True         # Usa protocolo de segurança TLS
 EMAIL_HOST_USER = 'nayanda.robers@gmail.com' # SEU ENDEREÇO DE EMAIL GMAIL
 EMAIL_HOST_PASSWORD = 'turimfzxteukzrvf' # SENHA DE APP
 DEFAULT_FROM_EMAIL = 'nayanda.robers@gmail.com'
+
+# =================================================================
+# CONFIGURAÇÃO CORS PARA INTEGRAÇÃO COM REACT
+# =================================================================
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # React dev server padrão
+    "http://localhost:3001",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+# =================================================================
+# CONFIGURAÇÃO REST FRAMEWORK
+# =================================================================
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',  # Para desenvolvimento. Em produção, usar autenticação
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+}

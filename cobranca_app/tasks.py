@@ -1,14 +1,19 @@
-# cobranca_app/tasks.py
 """
-Tasks orquestradoras (sem Celery por enquanto).
-Mantém a função rotina_diaria_disparo() sendo chamada a partir daqui para compatibilidade.
+Scheduled tasks for the billing application.
+Following Clean Code: clear separation between task scheduling and business logic.
 """
+from cobranca_app.services.cobranca_service import DailyBillingRoutine
 
-from cobranca_app.services.cobranca_service import rotina_diaria_disparo
 
-def rotina_diaria_disparo_task():
+def rotina_diaria_disparo_task() -> str:
     """
-    Wrapper simples para compatibilidade com o que você já chama.
-    No futuro, se usar Celery, transforme esse wrapper em task do Celery.
+    Task wrapper for daily billing routine.
+    This function is called by the scheduler (django-apscheduler).
+    
+    Returns:
+        Status message from the routine execution
+    
+    Note:
+        In the future, if using Celery, this can be converted to a Celery task.
     """
-    return rotina_diaria_disparo()
+    return DailyBillingRoutine.execute()

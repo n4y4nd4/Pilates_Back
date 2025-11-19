@@ -1,63 +1,86 @@
-# cobranca_app/views.py
-
-from rest_framework import viewsets
+"""
+API Views for the billing application.
+Following Clean Code: views only handle HTTP requests/responses, business logic in services.
+"""
+from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import Plano, Cliente, Cobranca
-from .serializers import PlanoSerializer, ClienteSerializer, CobrancaSerializer
-from django.utils import timezone
-from datetime import timedelta
+
+from cobranca_app.models import Plano, Cliente, Cobranca
+from cobranca_app.serializers import (
+    PlanoSerializer,
+    ClienteSerializer,
+    CobrancaSerializer
+)
+from cobranca_app.services.cliente_service import ClienteService
+from cobranca_app.core.constants import StatusCobranca
+from cobranca_app.core.exceptions import ClienteException, CobrancaException
 
 
 class ClienteViewSet(viewsets.ModelViewSet):
     """
-    ViewSet para listar, criar, atualizar e deletar Clientes.
-    Usado para o Wireframe de Cadastro e Listagem de Clientes.
+    ViewSet for managing clients.
+    Handles CRUD operations via REST API.
     """
     queryset = Cliente.objects.all().order_by('nome')
     serializer_class = ClienteSerializer
     
-    def perform_create(self, serializer):
+    def perform_create(self, serializer) -> None:
+        """
+        Create a new client and automatically generate first billing.
+        
+        Args:
+            serializer: ClienteSerializer instance
+        """
         cliente = serializer.save()
-        
-        periodicidade = cliente.plano.periodicidade_meses
-        data_vencimento = cliente.data_inicio_contrato + timedelta(days=periodicidade * 30) 
-        
-        Cobranca.objects.create(
-            cliente=cliente,
-            valor_base=cliente.plano.valor_base,
-            valor_total_devido=cliente.plano.valor_base,
-            data_vencimento=data_vencimento,
-            referencia_ciclo=data_vencimento.strftime("%Y-%m") 
-        )
-        
+        ClienteService.create_client_with_initial_billing(cliente)
+
 
 class CobrancaViewSet(viewsets.ModelViewSet):
     """
-    ViewSet para listar Cobranças e realizar a ação de Marcar como Pago.
-    Usado para o Wireframe de Listagem de Cobranças.
+    ViewSet for managing billings.
+    Handles listing and payment marking operations.
     """
     queryset = Cobranca.objects.all().order_by('-data_vencimento')
     serializer_class = CobrancaSerializer
     
     @action(detail=True, methods=['patch'])
-    def marcar_pago(self, request, pk=None):
+    def marcar_pago(self, request, pk=None) -> Response:
+        """
+        Mark a billing as paid.
+        
+        Args:
+            request: HTTP request
+            pk: Billing primary key
+        
+        Returns:
+            HTTP response with billing data or error message
+        """
         cobranca = self.get_object()
         
-        if cobranca.status_cobranca == 'PAGO':
-            return Response({'status': 'Cobrança já está paga'}, status=200)
-
-        cobranca.status_cobranca = 'PAGO'
-        cobranca.data_pagamento = timezone.localdate()
-        cobranca.valor_multa_juros = 0.00 
-        cobranca.save()
+        if cobranca.is_pago():
+            return Response(
+                {'status': 'Cobrança já está paga'},
+                status=status.HTTP_200_OK
+            )
         
-        return Response(CobrancaSerializer(cobranca).data)
+        try:
+            cobranca.marcar_como_pago()
+            return Response(
+                CobrancaSerializer(cobranca).data,
+                status=status.HTTP_200_OK
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'Erro ao marcar como pago: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class PlanoViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    ViewSet para listar os Planos disponíveis (usado no dropdown do Cadastro).
+    ViewSet for listing available service plans.
+    Read-only endpoint for plan selection in client registration.
     """
-    queryset = Plano.objects.all().filter(ativo=True)
+    queryset = Plano.objects.filter(ativo=True).order_by('nome_plano')
     serializer_class = PlanoSerializer
