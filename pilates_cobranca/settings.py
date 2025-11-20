@@ -192,4 +192,5 @@ REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
     ],
+    'EXCEPTION_HANDLER': 'cobranca_app.core.exception_handler.excecao_handler_customizado',
 }

@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.utils import timezone
 from datetime import date, timedelta
 
-from cobranca_app.core.utils import (
+from cobranca_app.core.utilitarios import (
     calculate_due_date,
     format_date_for_display,
     normalize_phone_number,

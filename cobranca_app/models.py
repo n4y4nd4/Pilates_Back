@@ -8,15 +8,15 @@ from datetime import date, timedelta
 from decimal import Decimal
 from typing import Optional
 
-from cobranca_app.core.constants import (
+from cobranca_app.core.constantes import (
     StatusCliente,
     StatusCobranca,
     StatusEnvio,
     TipoCanal,
-    DAYS_PER_MONTH,
-    DATE_FORMAT_REFERENCE
+    DIAS_POR_MES,
+    FORMATO_DATA_REFERENCIA
 )
-from cobranca_app.core.utils import calculate_due_date
+from cobranca_app.core.utilitarios import calcular_data_vencimento
 
 
 class Plano(models.Model):
@@ -62,8 +62,8 @@ class Cliente(models.Model):
         (StatusCliente.ATIVO.value, 'Ativo'),
         (StatusCliente.INATIVO_ATRASO.value, 'Inativo por Atraso'),
         (StatusCliente.INATIVO_MANUAL.value, 'Inativo Manual'),
-    ]
-    
+]
+
     plano = models.ForeignKey(
         'Plano',
         on_delete=models.SET_NULL,
@@ -72,12 +72,24 @@ class Cliente(models.Model):
         verbose_name="Plano"
     )
     nome = models.CharField(max_length=200, verbose_name="Nome")
-    cpf = models.CharField(max_length=14, unique=True, verbose_name="CPF")
-    telefone_whatsapp = models.CharField(
-        max_length=15,
-        verbose_name="Telefone WhatsApp"
+    cpf = models.CharField(
+        max_length=11,
+        unique=True,
+        primary_key=True,
+        verbose_name="CPF",
+        help_text="CPF do cliente (apenas números, 11 dígitos)"
     )
-    email = models.EmailField(verbose_name="E-mail")
+    telefone_whatsapp = models.CharField(
+        max_length=20,
+        unique=True,
+        verbose_name="Telefone WhatsApp",
+        help_text="Telefone no formato: código do país + DDD + número"
+    )
+    email = models.EmailField(
+        unique=True,
+        verbose_name="E-mail",
+        help_text="E-mail único do cliente"
+    )
     data_inicio_contrato = models.DateField(verbose_name="Data de Início do Contrato")
     status_cliente = models.CharField(
         max_length=20,
@@ -103,9 +115,9 @@ class Cliente(models.Model):
         if not self.plano:
             raise ValueError("Cliente must have a plan to calculate due date")
         
-        return calculate_due_date(
-            start_date=self.data_inicio_contrato,
-            periodicity_months=self.plano.periodicidade_meses
+        return calcular_data_vencimento(
+            data_inicio=self.data_inicio_contrato,
+            periodicidade_meses=self.plano.periodicidade_meses
         )
     
     def get_ultima_cobranca(self) -> Optional['Cobranca']:
@@ -224,7 +236,7 @@ class Cobranca(models.Model):
     class Meta:
         verbose_name = "Cobrança"
         verbose_name_plural = "Cobranças"
-        ordering = ['-data_vencimento']
+        ordering = ['-data_vencimento'] 
 
 
 class Notificacao(models.Model):
@@ -234,8 +246,8 @@ class Notificacao(models.Model):
         (StatusEnvio.AGENDADO.value, 'Agendado'),
         (StatusEnvio.ENVIADO.value, 'Enviado'),
         (StatusEnvio.FALHA.value, 'Falha'),
-    ]
-    
+]
+
     cobranca = models.ForeignKey(
         'Cobranca',
         on_delete=models.CASCADE,
@@ -262,7 +274,7 @@ class Notificacao(models.Model):
         default=StatusEnvio.AGENDADO.value,
         verbose_name="Status de Envio"
     )
-    
+
     def __str__(self) -> str:
         return f"Notificação para {self.cobranca.cliente.nome} ({self.tipo_canal})"
     
@@ -281,4 +293,4 @@ class Notificacao(models.Model):
     class Meta:
         verbose_name = "Notificação"
         verbose_name_plural = "Notificações"
-        ordering = ['-data_agendada']
+        ordering = ['-data_agendada'] 

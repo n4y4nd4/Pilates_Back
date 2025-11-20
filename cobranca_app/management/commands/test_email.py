@@ -8,9 +8,9 @@ from datetime import timedelta
 from decimal import Decimal
 
 from cobranca_app.models import Cliente, Cobranca, Plano
-from cobranca_app.services.email_service import EmailService
-from cobranca_app.services.billing_service import BillingService
-from cobranca_app.core.constants import DAYS_BEFORE_DUE_REMINDER
+from cobranca_app.services.servico_email import ServicoEmail
+from cobranca_app.services.servico_cobranca import ServicoCobranca
+from cobranca_app.core.constantes import DIAS_ANTES_VENCIMENTO_LEMBRETE
 
 
 class Command(BaseCommand):
@@ -72,7 +72,7 @@ class Command(BaseCommand):
         cobranca = Cobranca.objects.filter(cliente=cliente).first()
         if not cobranca:
             self.stdout.write(self.style.WARNING('Criando cobrança de teste...'))
-            data_vencimento = timezone.localdate() + timedelta(days=DAYS_BEFORE_DUE_REMINDER)
+            data_vencimento = timezone.localdate() + timedelta(days=DIAS_ANTES_VENCIMENTO_LEMBRETE)
             cobranca = Cobranca.objects.create(
                 cliente=cliente,
                 valor_base=plano.valor_base,
@@ -92,7 +92,7 @@ class Command(BaseCommand):
         self.stdout.write(f'Assunto: Pilates - Aviso de Cobrança: Lembrete (D-3)')
         
         try:
-            sucesso, detalhe = EmailService.send_billing_notification(
+            sucesso, detalhe = ServicoEmail.enviar_notificacao_cobranca(
                 cobranca,
                 'Lembrete (D-3)'
             )

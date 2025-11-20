@@ -10,7 +10,7 @@ from decimal import Decimal
 import json
 
 from cobranca_app.models import Plano, Cliente, Cobranca
-from cobranca_app.core.constants import StatusCobranca
+from cobranca_app.core.constantes import StatusCobranca
 
 
 class ClienteAPITest(TestCase):

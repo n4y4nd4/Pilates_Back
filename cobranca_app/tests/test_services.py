@@ -8,15 +8,15 @@ from decimal import Decimal
 from unittest.mock import patch, MagicMock
 
 from cobranca_app.models import Plano, Cliente, Cobranca
-from cobranca_app.services.billing_service import BillingService
-from cobranca_app.services.cliente_service import ClienteService
-from cobranca_app.core.exceptions import ClienteException
-from cobranca_app.services.message_builder import MessageBuilder
-from cobranca_app.core.constants import StatusCobranca, DAYS_BEFORE_DUE_REMINDER
+from cobranca_app.services.servico_cobranca import ServicoCobranca
+from cobranca_app.services.servico_cliente import ServicoCliente
+from cobranca_app.core.excecoes import ExcecaoCliente
+from cobranca_app.services.construtor_mensagem import ConstrutorMensagem
+from cobranca_app.core.constantes import StatusCobranca, DIAS_ANTES_VENCIMENTO_LEMBRETE
 
 
-class BillingServiceTest(TestCase):
-    """Tests for BillingService."""
+class ServicoCobrancaTest(TestCase):
+    """Tests for ServicoCobranca."""
     
     def setUp(self):
         """Set up test data."""
@@ -38,7 +38,7 @@ class BillingServiceTest(TestCase):
     
     def test_create_initial_billing(self):
         """Test initial billing creation."""
-        cobranca = BillingService.create_initial_billing(self.cliente)
+        cobranca = ServicoCobranca.criar_cobranca_inicial(self.cliente)
         self.assertIsNotNone(cobranca)
         self.assertEqual(cobranca.cliente, self.cliente)
         self.assertEqual(cobranca.valor_base, Decimal('150.00'))
@@ -54,14 +54,14 @@ class BillingServiceTest(TestCase):
             referencia_ciclo="2025-11",
             status_cobranca=StatusCobranca.PENDENTE.value
         )
-        count = BillingService.mark_overdue_billings()
+        count = ServicoCobranca.marcar_cobrancas_atrasadas()
         self.assertEqual(count, 1)
         cobranca.refresh_from_db()
         self.assertTrue(cobranca.is_atrasado())
     
     def test_get_billings_for_reminder(self):
         """Test getting billings for reminder."""
-        reminder_date = timezone.localdate() + timedelta(days=DAYS_BEFORE_DUE_REMINDER)
+        reminder_date = timezone.localdate() + timedelta(days=DIAS_ANTES_VENCIMENTO_LEMBRETE)
         cobranca = Cobranca.objects.create(
             cliente=self.cliente,
             valor_base=Decimal('150.00'),
@@ -70,13 +70,13 @@ class BillingServiceTest(TestCase):
             referencia_ciclo="2025-12",
             status_cobranca=StatusCobranca.PENDENTE.value
         )
-        billings = BillingService.get_billings_for_reminder(reminder_date)
+        billings = ServicoCobranca.obter_cobrancas_para_lembrete(reminder_date)
         self.assertEqual(len(billings), 1)
         self.assertEqual(billings[0], cobranca)
 
 
-class ClienteServiceTest(TestCase):
-    """Tests for ClienteService."""
+class ServicoClienteTest(TestCase):
+    """Tests for ServicoCliente."""
     
     def setUp(self):
         """Set up test data."""
@@ -98,7 +98,7 @@ class ClienteServiceTest(TestCase):
             data_inicio_contrato=timezone.localdate(),
             status_cliente='ATIVO'
         )
-        ClienteService.create_client_with_initial_billing(cliente)
+        ServicoCliente.criar_cliente_com_cobranca_inicial(cliente)
         
         # Refresh from DB to get ID
         cliente.refresh_from_db()
@@ -107,8 +107,8 @@ class ClienteServiceTest(TestCase):
         self.assertIsNotNone(cobranca)
 
 
-class MessageBuilderTest(TestCase):
-    """Tests for MessageBuilder."""
+class ConstrutorMensagemTest(TestCase):
+    """Tests for ConstrutorMensagem."""
     
     def setUp(self):
         """Set up test data."""
@@ -138,22 +138,22 @@ class MessageBuilderTest(TestCase):
     
     def test_build_reminder_message(self):
         """Test reminder message building."""
-        tipo_regua, conteudo = MessageBuilder.build_reminder_message(self.cobranca)
+        tipo_regua, conteudo = ConstrutorMensagem.construir_mensagem_lembrete(self.cobranca)
         self.assertEqual(tipo_regua, 'Lembrete (D-3)')
         self.assertIn("Cliente Teste", conteudo)
         self.assertIn("150.00", conteudo)
     
     def test_build_overdue_message_d1(self):
         """Test overdue message for D+1."""
-        from cobranca_app.core.constants import DAYS_AFTER_DUE_WARNING_1
-        tipo_regua, conteudo = MessageBuilder.build_overdue_message(self.cobranca, DAYS_AFTER_DUE_WARNING_1)
+        from cobranca_app.core.constantes import DIAS_APOS_VENCIMENTO_AVISO_1
+        tipo_regua, conteudo = ConstrutorMensagem.construir_mensagem_atraso(self.cobranca, DIAS_APOS_VENCIMENTO_AVISO_1)
         self.assertEqual(tipo_regua, 'Atraso (D+1)')
         self.assertIn("ATRASO", conteudo)
     
     def test_build_overdue_message_d10(self):
         """Test overdue message for D+10."""
-        from cobranca_app.core.constants import DAYS_AFTER_DUE_WARNING_2
-        tipo_regua, conteudo = MessageBuilder.build_overdue_message(self.cobranca, DAYS_AFTER_DUE_WARNING_2)
+        from cobranca_app.core.constantes import DIAS_APOS_VENCIMENTO_AVISO_2
+        tipo_regua, conteudo = ConstrutorMensagem.construir_mensagem_atraso(self.cobranca, DIAS_APOS_VENCIMENTO_AVISO_2)
         self.assertEqual(tipo_regua, 'Aviso de Bloqueio (D+10)')
         self.assertIn("ATRASO", conteudo)
 

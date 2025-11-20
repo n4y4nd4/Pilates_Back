@@ -2,7 +2,7 @@
 Scheduled tasks for the billing application.
 Following Clean Code: clear separation between task scheduling and business logic.
 """
-from cobranca_app.services.cobranca_service import DailyBillingRoutine
+from cobranca_app.services.servico_rotina_cobranca import RotinaDiariaCobranca
 
 
 def rotina_diaria_disparo_task() -> str:
@@ -16,4 +16,4 @@ def rotina_diaria_disparo_task() -> str:
     Note:
         In the future, if using Celery, this can be converted to a Celery task.
     """
-    return DailyBillingRoutine.execute()
+    return RotinaDiariaCobranca.executar()

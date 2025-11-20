@@ -6,15 +6,16 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from cobranca_app.models import Plano, Cliente, Cobranca
+from cobranca_app.models import Plano, Cliente, Cobranca, Notificacao
 from cobranca_app.serializers import (
     PlanoSerializer,
     ClienteSerializer,
-    CobrancaSerializer
+    CobrancaSerializer,
+    NotificacaoSerializer
 )
-from cobranca_app.services.cliente_service import ClienteService
-from cobranca_app.core.constants import StatusCobranca
-from cobranca_app.core.exceptions import ClienteException, CobrancaException
+from cobranca_app.services.servico_cliente import ServicoCliente
+from cobranca_app.core.constantes import StatusCobranca
+from cobranca_app.core.excecoes import ExcecaoCliente, ExcecaoCobrancaOperacao
 
 
 class ClienteViewSet(viewsets.ModelViewSet):
@@ -32,17 +33,40 @@ class ClienteViewSet(viewsets.ModelViewSet):
         Args:
             serializer: ClienteSerializer instance
         """
-        cliente = serializer.save()
-        ClienteService.create_client_with_initial_billing(cliente)
-
+        try:
+            cliente = serializer.save()
+            ServicoCliente.criar_cliente_com_cobranca_inicial(cliente)
+        except Exception as e:
+            # Re-raise para que o exception handler possa tratar
+            raise
+        
 
 class CobrancaViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing billings.
     Handles listing and payment marking operations.
     """
-    queryset = Cobranca.objects.all().order_by('-data_vencimento')
+    queryset = Cobranca.objects.all().select_related('cliente').order_by('-data_vencimento')
     serializer_class = CobrancaSerializer
+    
+    def update(self, request, *args, **kwargs):
+        """
+        Atualiza uma cobrança (permite reverter pagamento).
+        
+        Permite atualizar status_cobranca e data_pagamento para reverter pagamento.
+        """
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        
+        # Se estiver revertendo pagamento (status_cobranca para PENDENTE e data_pagamento null)
+        if 'status_cobranca' in request.data and request.data['status_cobranca'] in ['PENDENTE', 'ATRASADO']:
+            if 'data_pagamento' in request.data and request.data['data_pagamento'] is None:
+                instance.data_pagamento = None
+        
+        self.perform_update(serializer)
+        return Response(serializer.data)
     
     @action(detail=True, methods=['patch'])
     def marcar_pago(self, request, pk=None) -> Response:
@@ -84,3 +108,14 @@ class PlanoViewSet(viewsets.ReadOnlyModelViewSet):
     """
     queryset = Plano.objects.filter(ativo=True).order_by('nome_plano')
     serializer_class = PlanoSerializer
+
+
+class NotificacaoViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for listing notifications.
+    Read-only endpoint for viewing all notifications sent by the system.
+    """
+    queryset = Notificacao.objects.all().select_related(
+        'cobranca__cliente'
+    ).order_by('-data_agendada')
+    serializer_class = NotificacaoSerializer

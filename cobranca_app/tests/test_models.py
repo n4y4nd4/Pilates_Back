@@ -7,7 +7,7 @@ from datetime import timedelta
 from decimal import Decimal
 
 from cobranca_app.models import Plano, Cliente, Cobranca, Notificacao
-from cobranca_app.core.constants import (
+from cobranca_app.core.constantes import (
     StatusCliente,
     StatusCobranca,
     StatusEnvio
