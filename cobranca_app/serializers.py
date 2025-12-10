@@ -39,12 +39,11 @@ class ClienteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cliente
         fields = '__all__'
-        read_only_fields = ('id', 'cpf')  # CPF é primary key, não pode ser atualizado
+        read_only_fields = ('id',)  # CPF é primary key, mas deve ser writable na criação
         # status_cliente foi removido de read_only_fields para permitir atualização manual
         extra_kwargs = {
             'cpf': {
                 'validators': [],  # Remove validators padrão, usamos validação customizada
-                'read_only': True,  # CPF não pode ser alterado após criação
             },
             'telefone_whatsapp': {
                 'validators': [],  # Remove validators padrão, usamos validação customizada

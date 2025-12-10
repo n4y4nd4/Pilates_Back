@@ -1,11 +1,12 @@
 """
 Tests for API endpoints.
 """
-from django.test import TestCase
+from django.test import TransactionTestCase
 from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework import status
 from django.utils import timezone
+from datetime import timedelta
 from decimal import Decimal
 import json
 
@@ -13,7 +14,7 @@ from cobranca_app.models import Plano, Cliente, Cobranca
 from cobranca_app.core.constantes import StatusCobranca
 
 
-class ClienteAPITest(TestCase):
+class ClienteAPITest(TransactionTestCase):
     """Tests for Cliente API endpoints."""
     
     def setUp(self):
@@ -31,7 +32,7 @@ class ClienteAPITest(TestCase):
         Cliente.objects.create(
             plano=self.plano,
             nome="Cliente 1",
-            cpf="11111111111",
+            cpf="85202874015",
             telefone_whatsapp="5521999999999",
             email="cliente1@example.com",
             data_inicio_contrato=timezone.localdate(),
@@ -47,18 +48,20 @@ class ClienteAPITest(TestCase):
         """Test creating a client."""
         url = reverse('cliente-list')
         data = {
-            'plano': self.plano.id,
+            'plano': self.plano.pk,
             'nome': 'Novo Cliente',
-            'cpf': '22222222222',
+            'cpf': '11144477735',
             'telefone_whatsapp': '5521999887766',
             'email': 'novo@example.com',
             'data_inicio_contrato': '2025-01-20'
         }
         response = self.client.post(url, data, format='json')
+        if response.status_code != status.HTTP_201_CREATED:
+            print(f"Validation Error: {response.data}")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         
         # Verify client was created
-        cliente = Cliente.objects.get(cpf='22222222222')
+        cliente = Cliente.objects.get(cpf='11144477735')
         self.assertEqual(cliente.nome, 'Novo Cliente')
         
         # Verify initial billing was created
@@ -70,14 +73,14 @@ class ClienteAPITest(TestCase):
         cliente = Cliente.objects.create(
             plano=self.plano,
             nome="Cliente Teste",
-            cpf="33333333333",
+            cpf="66128841003",
             telefone_whatsapp="5521999776655",
             email="teste@example.com",
             data_inicio_contrato=timezone.localdate(),
             status_cliente='ATIVO'
         )
         
-        url = reverse('cliente-detail', kwargs={'pk': cliente.id})
+        url = reverse('cliente-detail', kwargs={'pk': cliente.pk})
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['nome'], 'Cliente Teste')
@@ -87,14 +90,14 @@ class ClienteAPITest(TestCase):
         cliente = Cliente.objects.create(
             plano=self.plano,
             nome="Cliente Original",
-            cpf="44444444444",
+            cpf="94957245084",
             telefone_whatsapp="5521999665544",
             email="original@example.com",
             data_inicio_contrato=timezone.localdate(),
             status_cliente='ATIVO'
         )
         
-        url = reverse('cliente-detail', kwargs={'pk': cliente.id})
+        url = reverse('cliente-detail', kwargs={'pk': cliente.pk})
         data = {'nome': 'Cliente Atualizado'}
         response = self.client.patch(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -107,20 +110,26 @@ class ClienteAPITest(TestCase):
         cliente = Cliente.objects.create(
             plano=self.plano,
             nome="Cliente Para Deletar",
-            cpf="55555555555",
+            cpf="63935686001",
             telefone_whatsapp="5521999554433",
             email="deletar@example.com",
             data_inicio_contrato=timezone.localdate(),
             status_cliente='ATIVO'
         )
         
-        url = reverse('cliente-detail', kwargs={'pk': cliente.id})
+        url = reverse('cliente-detail', kwargs={'pk': cliente.pk})
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertFalse(Cliente.objects.filter(id=cliente.id).exists())
+        self.assertFalse(Cliente.objects.filter(pk=cliente.pk).exists())
+
+    def tearDown(self):
+        """Clean up after each test."""
+        Cobranca.objects.all().delete()
+        Cliente.objects.all().delete()
+        Plano.objects.all().delete()
 
 
-class CobrancaAPITest(TestCase):
+class CobrancaAPITest(TransactionTestCase):
     """Tests for Cobranca API endpoints."""
     
     def setUp(self):
@@ -135,7 +144,7 @@ class CobrancaAPITest(TestCase):
         self.cliente = Cliente.objects.create(
             plano=self.plano,
             nome="Cliente Teste",
-            cpf="66666666666",
+            cpf="47656627061",
             telefone_whatsapp="5521999443322",
             email="teste@example.com",
             data_inicio_contrato=timezone.localdate(),
@@ -150,6 +159,12 @@ class CobrancaAPITest(TestCase):
             status_cobranca=StatusCobranca.PENDENTE.value
         )
     
+    def tearDown(self):
+        """Clean up after each test."""
+        Cobranca.objects.all().delete()
+        Cliente.objects.all().delete()
+        Plano.objects.all().delete()
+    
     def test_list_cobrancas(self):
         """Test listing billings."""
         url = reverse('cobranca-list')
@@ -159,14 +174,14 @@ class CobrancaAPITest(TestCase):
     
     def test_get_cobranca_detail(self):
         """Test getting billing details."""
-        url = reverse('cobranca-detail', kwargs={'pk': self.cobranca.id})
+        url = reverse('cobranca-detail', kwargs={'pk': self.cobranca.pk})
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['id'], self.cobranca.id)
+        self.assertEqual(response.data['id'], self.cobranca.pk)
     
     def test_marcar_pago(self):
         """Test marking billing as paid."""
-        url = reverse('cobranca-marcar-pago', kwargs={'pk': self.cobranca.id})
+        url = reverse('cobranca-marcar-pago', kwargs={'pk': self.cobranca.pk})
         response = self.client.patch(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
@@ -178,13 +193,13 @@ class CobrancaAPITest(TestCase):
         """Test marking already paid billing."""
         self.cobranca.marcar_como_pago()
         
-        url = reverse('cobranca-marcar-pago', kwargs={'pk': self.cobranca.id})
+        url = reverse('cobranca-marcar-pago', kwargs={'pk': self.cobranca.pk})
         response = self.client.patch(url)
         # Should still return 200, but billing is already paid
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
 
-class PlanoAPITest(TestCase):
+class PlanoAPITest(TransactionTestCase):
     """Tests for Plano API endpoints."""
     
     def setUp(self):
@@ -220,4 +235,10 @@ class PlanoAPITest(TestCase):
         # Should only return active plan
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]['nome_plano'], 'Plano Mensal')
+
+    def tearDown(self):
+        """Clean up after each test."""
+        Cobranca.objects.all().delete()
+        Cliente.objects.all().delete()
+        Plano.objects.all().delete()
 

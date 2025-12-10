@@ -29,7 +29,7 @@ class ServicoCobrancaTest(TestCase):
         self.cliente = Cliente.objects.create(
             plano=self.plano,
             nome="Cliente Teste",
-            cpf="12345678901",
+            cpf="53372276079",
             telefone_whatsapp="5521999999999",
             email="teste@example.com",
             data_inicio_contrato=timezone.localdate(),
@@ -92,7 +92,7 @@ class ServicoClienteTest(TestCase):
         cliente = Cliente(
             plano=self.plano,
             nome="Novo Cliente",
-            cpf="98765432100",
+            cpf="94200547400",
             telefone_whatsapp="5521999887766",
             email="novo@example.com",
             data_inicio_contrato=timezone.localdate(),
@@ -102,7 +102,7 @@ class ServicoClienteTest(TestCase):
         
         # Refresh from DB to get ID
         cliente.refresh_from_db()
-        self.assertIsNotNone(cliente.id)
+        self.assertIsNotNone(cliente.pk)
         cobranca = cliente.get_ultima_cobranca()
         self.assertIsNotNone(cobranca)
 
@@ -121,7 +121,7 @@ class ConstrutorMensagemTest(TestCase):
         self.cliente = Cliente.objects.create(
             plano=self.plano,
             nome="Cliente Teste",
-            cpf="12345678901",
+            cpf="53372276079",
             telefone_whatsapp="5521999999999",
             email="teste@example.com",
             data_inicio_contrato=timezone.localdate(),
