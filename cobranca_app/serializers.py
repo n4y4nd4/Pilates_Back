@@ -44,27 +44,48 @@ class ClienteSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'cpf': {
                 'validators': [],  # Remove validators padrão, usamos validação customizada
+                'max_length': 14,  # Aceita CPF formatado: 000.000.000-00
             },
             'telefone_whatsapp': {
                 'validators': [],  # Remove validators padrão, usamos validação customizada
+                'max_length': 20,  # Aceita telefone com código do país + DDD + número
+            },
+            'nome': {
+                'max_length': 200,
+                'required': True,
+            },
+            'email': {
+                'max_length': 254,
+                'required': True,
             },
         }
     
     def validate_cpf(self, value):
         """
         Valida e normaliza o CPF.
+        Aceita CPF formatado (000.000.000-00) ou sem formatação (00000000000).
         Durante updates, o CPF é read-only e não deve ser validado.
         
         Args:
-            value: CPF a validar
+            value: CPF a validar (pode conter pontos e traço, até 14 caracteres)
         
         Returns:
-            CPF normalizado (apenas dígitos)
+            CPF normalizado (apenas dígitos, 11 caracteres)
         """
         # Se estiver atualizando (instance existe), o CPF não deve ser alterado
         if self.instance:
             # Retorna o CPF atual sem validar (já que é read-only)
             return self.instance.cpf
+        
+        if not value:
+            raise serializers.ValidationError("CPF é obrigatório")
+        
+        # Remove espaços em branco
+        value = str(value).strip()
+        
+        # Verifica tamanho máximo antes de validar (aceita até 14 caracteres com formatação)
+        if len(value) > 14:
+            raise serializers.ValidationError("CPF deve ter no máximo 14 caracteres (formato: 000.000.000-00)")
         
         from rest_framework import serializers as drf_serializers
         from cobranca_app.core.validadores import validar_cpf, validar_cpf_unico
@@ -72,6 +93,7 @@ class ClienteSerializer(serializers.ModelSerializer):
         
         try:
             # Valida formato e dígitos verificadores apenas na criação
+            # A função validar_cpf já valida o tamanho e formato completo
             cpf_normalizado = validar_cpf(value)
             
             # Valida unicidade
@@ -89,7 +111,7 @@ class ClienteSerializer(serializers.ModelSerializer):
             value: E-mail a validar
         
         Returns:
-            E-mail validado
+            E-mail validado (normalizado em minúsculas)
         """
         from rest_framework import serializers as drf_serializers
         from cobranca_app.core.validadores import validar_email_unico
@@ -99,9 +121,19 @@ class ClienteSerializer(serializers.ModelSerializer):
         if not value:
             raise drf_serializers.ValidationError("E-mail é obrigatório")
         
+        # Remove espaços em branco
+        value = str(value).strip()
+        
+        # Valida tamanho máximo (254 caracteres é o padrão RFC)
+        if len(value) > 254:
+            raise drf_serializers.ValidationError("E-mail deve ter no máximo 254 caracteres")
+        
         # Valida formato básico de e-mail
         if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', value):
             raise drf_serializers.ValidationError("Formato de e-mail inválido. Use o formato: exemplo@dominio.com")
+        
+        # Normaliza para minúsculas
+        value = value.lower()
         
         try:
             # Valida unicidade (se estiver atualizando, passa o CPF atual)
@@ -124,7 +156,7 @@ class ClienteSerializer(serializers.ModelSerializer):
     
     def validate_telefone_whatsapp(self, value):
         """
-        Valida se o telefone é único.
+        Valida formato e unicidade do telefone WhatsApp.
         
         Args:
             value: Telefone a validar
@@ -133,10 +165,23 @@ class ClienteSerializer(serializers.ModelSerializer):
             Telefone validado
         """
         from rest_framework import serializers as drf_serializers
-        from cobranca_app.core.validadores import validar_telefone_unico
+        from cobranca_app.core.validadores import validar_telefone_unico, validar_numero_telefone
         from cobranca_app.core.excecoes import ExcecaoDadosInvalidos
         
+        if not value:
+            raise drf_serializers.ValidationError("Telefone WhatsApp é obrigatório")
+        
+        # Remove espaços em branco
+        value = str(value).strip()
+        
+        # Valida tamanho máximo
+        if len(value) > 20:
+            raise drf_serializers.ValidationError("Telefone deve ter no máximo 20 caracteres")
+        
         try:
+            # Valida formato básico do telefone
+            validar_numero_telefone(value)
+            
             # Valida unicidade (se estiver atualizando, passa o CPF atual)
             cliente_cpf = getattr(self.instance, 'cpf', None) if self.instance else None
             validar_telefone_unico(value, cliente_cpf)
@@ -145,9 +190,65 @@ class ClienteSerializer(serializers.ModelSerializer):
             raise drf_serializers.ValidationError(str(e))
         
     def validate_plano(self, value):
-        """Validate that the plan is active."""
-        if value and not value.ativo:
+        """
+        Valida que o plano existe e está ativo.
+        
+        Args:
+            value: Plano a validar
+        
+        Returns:
+            Plano validado
+        """
+        if value is not None and not value.ativo:
             raise serializers.ValidationError("O plano selecionado não está ativo.")
+        return value
+    
+    def validate_nome(self, value):
+        """
+        Valida o nome do cliente.
+        
+        Args:
+            value: Nome a validar
+        
+        Returns:
+            Nome validado
+        """
+        if not value:
+            raise serializers.ValidationError("Nome é obrigatório")
+        
+        # Remove espaços extras e valida tamanho
+        value = ' '.join(str(value).strip().split())
+        
+        if len(value) < 2:
+            raise serializers.ValidationError("Nome deve ter pelo menos 2 caracteres")
+        
+        if len(value) > 200:
+            raise serializers.ValidationError("Nome deve ter no máximo 200 caracteres")
+        
+        return value
+    
+    def validate_data_inicio_contrato(self, value):
+        """
+        Valida a data de início do contrato.
+        
+        Args:
+            value: Data a validar
+        
+        Returns:
+            Data validada
+        """
+        if not value:
+            raise serializers.ValidationError("Data de início do contrato é obrigatória")
+        
+        from django.utils import timezone
+        hoje = timezone.localdate()
+        
+        # Permite datas futuras e passadas (não restringe muito)
+        # Mas não permite datas muito antigas (mais de 100 anos atrás)
+        from datetime import timedelta
+        if value < hoje - timedelta(days=36500):  # ~100 anos
+            raise serializers.ValidationError("Data de início do contrato não pode ser muito antiga")
+        
         return value
     
     def validate_status_cliente(self, value):

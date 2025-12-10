@@ -73,11 +73,11 @@ class Cliente(models.Model):
     )
     nome = models.CharField(max_length=200, verbose_name="Nome")
     cpf = models.CharField(
-        max_length=11,
+        max_length=14,
         unique=True,
         primary_key=True,
         verbose_name="CPF",
-        help_text="CPF do cliente (apenas números, 11 dígitos)"
+        help_text="CPF do cliente (pode incluir pontos e traço)"
     )
     telefone_whatsapp = models.CharField(
         max_length=20,

@@ -44,6 +44,10 @@ class ServicoCobranca:
             data_vencimento = cliente.calcular_proxima_data_vencimento()
             valor_base = cliente.plano.valor_base
             
+            # Verifica se a data de vencimento já passou para marcar como atrasada
+            hoje = timezone.localdate()
+            status_inicial = StatusCobranca.ATRASADO.value if data_vencimento < hoje else StatusCobranca.PENDENTE.value
+            
             return Cobranca.objects.create(
                 cliente=cliente,
                 valor_base=valor_base,
@@ -51,7 +55,7 @@ class ServicoCobranca:
                 valor_total_devido=valor_base,
                 data_vencimento=data_vencimento,
                 referencia_ciclo=data_vencimento.strftime(FORMATO_DATA_REFERENCIA),
-                status_cobranca=StatusCobranca.PENDENTE.value
+                status_cobranca=status_inicial
             )
         except Exception as e:
             registrar_evento("error", "Falha ao criar cobrança inicial", cliente_cpf=cliente.cpf)

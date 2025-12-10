@@ -77,6 +77,10 @@ def validar_cpf(cpf: Optional[str]) -> str:
     """
     Valida e normaliza CPF brasileiro.
     
+    Aceita CPF no formato:
+    - Com formatação: 000.000.000-00 (14 caracteres)
+    - Sem formatação: 00000000000 (11 dígitos)
+    
     Args:
         cpf: CPF a validar (pode conter pontos e traço)
     
@@ -89,19 +93,35 @@ def validar_cpf(cpf: Optional[str]) -> str:
     if not cpf:
         raise ExcecaoDadosInvalidos("CPF é obrigatório")
     
-    # Remove caracteres não numéricos
-    cpf_numeros = re.sub(r'[^0-9]', '', str(cpf))
+    cpf_str = str(cpf).strip()
     
-    # Verifica se tem 11 dígitos
+    # Verifica tamanho máximo antes de normalizar (aceita até 14 caracteres com formatação)
+    if len(cpf_str) > 14:
+        raise ExcecaoDadosInvalidos("CPF deve ter no máximo 14 caracteres (formato: 000.000.000-00)")
+    
+    # Remove caracteres não numéricos
+    cpf_numeros = re.sub(r'[^0-9]', '', cpf_str)
+    
+    # Verifica se tem exatamente 11 dígitos
     if len(cpf_numeros) != 11:
-        raise ExcecaoDadosInvalidos("CPF deve conter 11 dígitos")
+        raise ExcecaoDadosInvalidos(f"CPF deve conter exatamente 11 dígitos. Foram encontrados {len(cpf_numeros)} dígitos.")
     
     # Verifica se todos os dígitos são iguais (CPF inválido)
     if cpf_numeros == cpf_numeros[0] * 11:
         raise ExcecaoDadosInvalidos("CPF inválido: todos os dígitos são iguais")
     
-    # Validação dos dígitos verificadores
+    # Validação dos dígitos verificadores usando algoritmo oficial
     def calcular_digito(cpf_parcial: str, peso_inicial: int) -> int:
+        """
+        Calcula dígito verificador do CPF.
+        
+        Args:
+            cpf_parcial: Parte do CPF para calcular o dígito
+            peso_inicial: Peso inicial para o cálculo (10 para primeiro dígito, 11 para segundo)
+        
+        Returns:
+            Dígito verificador calculado
+        """
         soma = sum(int(cpf_parcial[i]) * (peso_inicial - i) for i in range(len(cpf_parcial)))
         resto = soma % 11
         return 0 if resto < 2 else 11 - resto

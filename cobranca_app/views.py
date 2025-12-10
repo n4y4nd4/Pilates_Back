@@ -49,6 +49,18 @@ class CobrancaViewSet(viewsets.ModelViewSet):
     queryset = Cobranca.objects.all().select_related('cliente').order_by('-data_vencimento')
     serializer_class = CobrancaSerializer
     
+    def get_queryset(self):
+        """
+        Filtra as cobranças por status se o parâmetro 'status' for fornecido.
+        """
+        queryset = super().get_queryset()
+        status_param = self.request.query_params.get('status', None)
+        
+        if status_param:
+            queryset = queryset.filter(status_cobranca=status_param.upper())
+        
+        return queryset
+    
     def update(self, request, *args, **kwargs):
         """
         Atualiza uma cobrança (permite reverter pagamento).
@@ -66,6 +78,34 @@ class CobrancaViewSet(viewsets.ModelViewSet):
                 instance.data_pagamento = None
         
         self.perform_update(serializer)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def atrasadas(self, request) -> Response:
+        """
+        Retorna todas as cobranças atrasadas.
+        
+        Returns:
+            Lista de cobranças com status ATRASADO
+        """
+        cobrancas_atrasadas = self.get_queryset().filter(
+            status_cobranca=StatusCobranca.ATRASADO.value
+        )
+        serializer = self.get_serializer(cobrancas_atrasadas, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def pendentes(self, request) -> Response:
+        """
+        Retorna todas as cobranças pendentes.
+        
+        Returns:
+            Lista de cobranças com status PENDENTE
+        """
+        cobrancas_pendentes = self.get_queryset().filter(
+            status_cobranca=StatusCobranca.PENDENTE.value
+        )
+        serializer = self.get_serializer(cobrancas_pendentes, many=True)
         return Response(serializer.data)
     
     @action(detail=True, methods=['patch'])

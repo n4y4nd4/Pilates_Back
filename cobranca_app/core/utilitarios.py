@@ -17,21 +17,45 @@ def calcular_data_vencimento(
 ) -> date:
     """
     Calcula a data de vencimento com base na data de início e periodicidade.
+    Usa cálculo de meses correto (não apenas dias).
     
     Args:
         data_inicio: Data de início do contrato
         periodicidade_meses: Número de meses no período de cobrança
-        dias_por_mes: Dias a considerar por mês (padrão: 30)
+        dias_por_mes: Parâmetro não utilizado (mantido para compatibilidade)
     
     Returns:
-        Data de vencimento calculada
-    """
-    data_calculada = data_inicio + timedelta(days=periodicidade_meses * dias_por_mes)
-    hoje = timezone.localdate()
+        Data de vencimento calculada (data_inicio + periodicidade_meses meses)
     
-    # Se a data calculada está no passado, calcula a partir de hoje
-    if data_calculada < hoje:
-        return hoje + timedelta(days=periodicidade_meses * dias_por_mes)
+    Exemplo:
+        Se data_inicio = 06/11/2025 e periodicidade_meses = 1 (mensal)
+        Retorna: 06/12/2025 (mesmo dia do mês seguinte)
+    """
+    # Calcula a data adicionando meses corretamente
+    # Garante que o dia seja mantido quando possível
+    from calendar import monthrange
+    
+    ano = data_inicio.year
+    mes = data_inicio.month
+    dia_original = data_inicio.day
+    
+    # Adiciona os meses
+    mes += periodicidade_meses
+    
+    # Ajusta o ano se necessário
+    while mes > 12:
+        mes -= 12
+        ano += 1
+    
+    # Obtém o último dia válido do mês de destino
+    ultimo_dia_mes = monthrange(ano, mes)[1]
+    
+    # Mantém o dia original se ele existe no mês de destino
+    # Caso contrário, usa o último dia válido do mês
+    # Exemplo: 31/01 -> 28/02 (ou 29/02 se bissexto)
+    dia_final = min(dia_original, ultimo_dia_mes)
+    
+    data_calculada = date(ano, mes, dia_final)
     
     return data_calculada
 

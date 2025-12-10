@@ -50,7 +50,7 @@ class ClienteAPITest(TransactionTestCase):
         data = {
             'plano': self.plano.pk,
             'nome': 'Novo Cliente',
-            'cpf': '11144477735',
+            'cpf': '111.444.777-35',
             'telefone_whatsapp': '5521999887766',
             'email': 'novo@example.com',
             'data_inicio_contrato': '2025-01-20'
