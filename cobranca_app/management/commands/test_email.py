@@ -94,7 +94,8 @@ class Command(BaseCommand):
         try:
             sucesso, detalhe = ServicoEmail.enviar_notificacao_cobranca(
                 cobranca,
-                'Lembrete (D-3)'
+                'Lembrete (D-3)',
+                'Conteúdo de teste do comando test_email'
             )
             
             if sucesso:

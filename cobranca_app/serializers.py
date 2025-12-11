@@ -333,11 +333,24 @@ class NotificacaoSerializer(serializers.ModelSerializer):
         required=False
     )
     
+    cliente_nome = serializers.SerializerMethodField()
+    cliente_email = serializers.SerializerMethodField()
+    cobranca_referencia = serializers.SerializerMethodField()
+    cobranca_valor = serializers.SerializerMethodField()
+    cobranca_data_vencimento = serializers.SerializerMethodField()
+    dias_em_atraso = serializers.SerializerMethodField()
+    
     class Meta:
         model = Notificacao
         fields = [
             'id',
             'cobranca_cliente_nome',
+            'cliente_nome',
+            'cliente_email',
+            'cobranca_referencia',
+            'cobranca_valor',
+            'cobranca_data_vencimento',
+            'dias_em_atraso',
             'data_envio_real',
             'data_agendada',
             'tipo_regua',
@@ -346,6 +359,24 @@ class NotificacaoSerializer(serializers.ModelSerializer):
             'conteudo_mensagem',
         ]
         read_only_fields = ('cobranca_cliente_nome',)
+    
+    def get_cliente_nome(self, obj):
+        """Retorna o nome do cliente associado à cobrança."""
+        try:
+            if obj.cobranca and obj.cobranca.cliente:
+                return obj.cobranca.cliente.nome
+        except AttributeError:
+            pass
+        return None
+    
+    def get_cliente_email(self, obj):
+        """Retorna o email do cliente associado à cobrança."""
+        try:
+            if obj.cobranca and obj.cobranca.cliente:
+                return obj.cobranca.cliente.email
+        except AttributeError:
+            pass
+        return None
     
     def get_cobranca_cliente_nome(self, obj):
         """
@@ -358,6 +389,42 @@ class NotificacaoSerializer(serializers.ModelSerializer):
         except AttributeError:
             pass
         return None
+    
+    def get_cobranca_referencia(self, obj):
+        """Retorna a referência de ciclo da cobrança."""
+        try:
+            if obj.cobranca:
+                return obj.cobranca.referencia_ciclo
+        except AttributeError:
+            pass
+        return None
+    
+    def get_cobranca_valor(self, obj):
+        """Retorna o valor total devido da cobrança."""
+        try:
+            if obj.cobranca:
+                return str(obj.cobranca.valor_total_devido)
+        except AttributeError:
+            pass
+        return None
+    
+    def get_cobranca_data_vencimento(self, obj):
+        """Retorna a data de vencimento da cobrança."""
+        try:
+            if obj.cobranca:
+                return obj.cobranca.data_vencimento.isoformat() if obj.cobranca.data_vencimento else None
+        except AttributeError:
+            pass
+        return None
+    
+    def get_dias_em_atraso(self, obj):
+        """Retorna o número de dias em atraso, se aplicável."""
+        try:
+            if obj.cobranca and obj.cobranca.is_vencida():
+                return obj.cobranca.calcular_dias_atraso()
+        except AttributeError:
+            pass
+        return 0
     
     def get_tipo_canal(self, obj):
         """

@@ -39,7 +39,7 @@ class ServicoCliente:
                     try:
                         dias_atraso = cobranca.calcular_dias_atraso()
                         tipo_regua, conteudo_mensagem = ConstrutorMensagem.construir_mensagem_atraso(cobranca, dias_atraso)
-                        ServicoEmail.enviar_notificacao_cobranca(cobranca, tipo_regua)
+                        ServicoEmail.enviar_notificacao_cobranca(cobranca, tipo_regua, conteudo_mensagem)
                         registrar_evento(
                             "info",
                             f"Email de cobrança atrasada enviado imediatamente para {cliente.nome}",

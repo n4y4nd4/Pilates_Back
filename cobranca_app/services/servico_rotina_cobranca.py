@@ -92,7 +92,7 @@ class RotinaDiariaCobranca:
             cliente, conteudo, tipo_regua
         )
         resultado_email = RotinaDiariaCobranca._enviar_notificacao_email(
-            cobranca, tipo_regua
+            cobranca, tipo_regua, conteudo
         )
         
         # Registrar notificações
@@ -155,23 +155,23 @@ class RotinaDiariaCobranca:
             return False, str(e)
     
     @staticmethod
-    def _enviar_notificacao_email(cobranca: Cobranca, tipo_regua: str) -> tuple:
+    def _enviar_notificacao_email(cobranca: Cobranca, tipo_regua: str, conteudo: str) -> tuple:
         """
         Envia notificação por e-mail.
         
         Args:
             cobranca: Instância de cobrança
             tipo_regua: Tipo de regra de lembrete
+            conteudo: Conteúdo da mensagem
         
         Returns:
             Tupla de (sucesso: bool, detalhe: str)
         """
         try:
-            return ServicoEmail.enviar_notificacao_cobranca(cobranca, tipo_regua)
+            return ServicoEmail.enviar_notificacao_cobranca(cobranca, tipo_regua, conteudo)
         except Exception as e:
             registrar_evento("error", f"Falha ao enviar e-mail: {e}", cobranca_id=cobranca.id)
-            return False, str(e)
-    
+            return False, str(e)    
     @staticmethod
     def _whatsapp_habilitado() -> bool:
         """Verifica se notificações WhatsApp estão habilitadas."""
@@ -211,15 +211,8 @@ class RotinaDiariaCobranca:
             status=status_whatsapp
         )
         
-        # Registrar notificação E-mail
-        status_email = StatusEnvio.ENVIADO if sucesso_email else StatusEnvio.FALHA
-        ServicoNotificacao.criar_notificacao(
-            cobranca=cobranca_para_notificacao,
-            tipo_regua=tipo_regua,
-            canal=TipoCanal.EMAIL,
-            conteudo=conteudo,
-            status=status_email
-        )
+        # Notificação de E-mail agora é registrada internamente pelo ServicoEmail
+        # para garantir que qualquer envio de email (mesmo fora da rotina) seja logado.
 
 
 # Função de compatibilidade retroativa

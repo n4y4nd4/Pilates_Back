@@ -130,7 +130,7 @@ META_API_SETTINGS = {
     'PHONE_ID': '887155537805840', # SEU PHONE ID REAL
     'URL_BASE': 'https://graph.facebook.com/v22.0/', # A versão da API que está no seu cURL
     'MOCK_MODE': False, # MODO DE PRODUÇÃO REAL!
-    'WHATSAPP_ENABLED': True, # Kill Switch: Define como False para desativar envio de WhatsApp sem afetar E-mail
+    'WHATSAPP_ENABLED': False, # Kill Switch: Define como False para desativar envio de WhatsApp sem afetar E-mail
 }
 # =================================================================
 # CONFIGURAÇÃO DE E-MAIL (LINHA 16)
